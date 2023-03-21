@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -7,90 +7,165 @@ public class DialogTimelineEditorWindow : EditorWindow
 {
     private DialogTimelineAsset _dialogTimelineAsset;
     private Vector2 _scrollPosition;
-    private GUIStyle headerStyle;
-    private Vector2 nodeSize = new Vector2(300, 100);
+    private GUIStyle _nodeStyle;
+    private GUIStyle _selectedNodeStyle;
+    private GUIStyle _inPointStyle;
+    private GUIStyle _outPointStyle;
+    private GUIStyle _optionNodeStyle;
 
-    private List<Rect> nodeWindows = new List<Rect>();
-    private List<Rect> optionNodeWindows = new List<Rect>();
+    private float _nodeWidth = 200;
+    private float _nodeHeight = 150;
+    private float _optionNodeWidth = 100;
+    private float _optionNodeHeight = 50;
 
-    private ConnectionPoint selectedInPoint;
-    private ConnectionPoint selectedOutPoint;
+    private List<NodeWindow> _nodeWindows;
+    private List<NodeWindow> _optionNodeWindows;
 
-
-    [MenuItem("Window/Dialog System/Dialog Timeline Editor")]
-    public static void ShowWindow()
+    [MenuItem("Window/Dialog Timeline Editor")]
+    public static void OpenDialogTimelineEditorWindow()
     {
-        GetWindow<DialogTimelineEditorWindow>("Dialog Timeline Editor");
+        var window = GetWindow<DialogTimelineEditorWindow>();
+        window.titleContent = new GUIContent("Dialog Timeline Editor");
     }
 
     private void OnEnable()
     {
-        headerStyle = new GUIStyle();
-        headerStyle.fontSize = 16;
-        headerStyle.fontStyle = FontStyle.Bold;
-        headerStyle.alignment = TextAnchor.MiddleCenter;
+        Initialize();
+    }
+
+    private void Initialize()
+    {
+        _nodeStyle = new GUIStyle();
+        _nodeStyle.normal.background = EditorGUIUtility.Load("builtin skins/darkskin/images/node1.png") as Texture2D;
+        _nodeStyle.border = new RectOffset(12, 12, 12, 12);
+
+        _selectedNodeStyle = new GUIStyle();
+        _selectedNodeStyle.normal.background = EditorGUIUtility.Load("builtin skins/darkskin/images/node1 on.png") as Texture2D;
+        _selectedNodeStyle.border = new RectOffset(12, 12, 12, 12);
+
+        _inPointStyle = new GUIStyle();
+        _inPointStyle.normal.background = EditorGUIUtility.Load("builtin skins/darkskin/images/btn left.png") as Texture2D;
+        _inPointStyle.active.background = EditorGUIUtility.Load("builtin skins/darkskin/images/btn left on.png") as Texture2D;
+        _inPointStyle.border = new RectOffset(4, 4, 12, 12);
+
+        _outPointStyle = new GUIStyle();
+        _outPointStyle.normal.background = EditorGUIUtility.Load("builtin skins/darkskin/images/btn right.png") as Texture2D;
+        _outPointStyle.active.background = EditorGUIUtility.Load("builtin skins/darkskin/images/btn right on.png") as Texture2D;
+        _outPointStyle.border = new RectOffset(4, 4, 12, 12);
+
+        _optionNodeStyle = new GUIStyle();
+        _optionNodeStyle.normal.background = EditorGUIUtility.Load("builtin skins/darkskin/images/node6.png") as Texture2D;
+        _optionNodeStyle.border = new RectOffset(12, 12, 12, 12);
+
+        _nodeWindows = new List<NodeWindow>();
+        _optionNodeWindows = new List<NodeWindow>();
     }
 
     private void OnGUI()
     {
+        DrawGrid(20, 0.2f, Color.gray);
+        DrawGrid(100, 0.4f, Color.gray);
+
+        EditorGUILayout.BeginHorizontal(GUILayout.Width(200));
+        _dialogTimelineAsset = (DialogTimelineAsset)EditorGUILayout.ObjectField(_dialogTimelineAsset, typeof(DialogTimelineAsset), false);
+        EditorGUILayout.EndHorizontal();
+
         if (_dialogTimelineAsset == null)
         {
-            EditorGUILayout.HelpBox("Please select a Dialog Timeline Asset to edit.", MessageType.Warning);
-            return;
+            EditorGUILayout.HelpBox("Please select a Dialog Timeline Asset.", MessageType.Warning);
         }
-
-        DrawToolbar();
-        DrawNodes();
-        DrawOptionNodes();
-        DrawConnections();
-        DrawConnectionHelpers();
-        ProcessEvents();
-    }
-
-    private void DrawToolbar()
-    {
-        GUILayout.BeginHorizontal(EditorStyles.toolbar);
-        GUILayout.FlexibleSpace();
-
-        if (GUILayout.Button("Select Dialog Timeline Asset", EditorStyles.toolbarButton))
+        else
         {
             SelectDialogTimelineAsset();
         }
+    }
+    private void SelectDialogTimelineAsset()
+    {
+        _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
 
-        GUILayout.FlexibleSpace();
-        GUILayout.EndHorizontal();
+        BeginWindows();
+
+        // Draw Dialog Nodes
+        if (_dialogTimelineAsset.DialogNodes != null)
+        {
+            _nodeWindows.Clear();
+            for (int i = 0; i < _dialogTimelineAsset.DialogNodes.Count; i++)
+            {
+                DialogNode dialogNode = _dialogTimelineAsset.DialogNodes[i];
+                _nodeWindows.Add(new NodeWindow(new Rect(dialogNode.Position, new Vector2(_nodeWidth, _nodeHeight)), _nodeStyle, _selectedNodeStyle, _inPointStyle, _outPointStyle, dialogNode));
+            }
+
+            for (int i = 0; i < _nodeWindows.Count; i++)
+            {
+                _nodeWindows[i].Draw();
+            }
+        }
+
+        // Draw Option Nodes
+        if (_dialogTimelineAsset.OptionNodes != null)
+        {
+            _optionNodeWindows.Clear();
+            for (int i = 0; i < _dialogTimelineAsset.OptionNodes.Count; i++)
+            {
+                OptionNode optionNode = _dialogTimelineAsset.OptionNodes[i];
+                _optionNodeWindows.Add(new NodeWindow(new Rect(optionNode.Position, new Vector2(_optionNodeWidth, _optionNodeHeight)), _optionNodeStyle, _selectedNodeStyle, _inPointStyle, _outPointStyle, optionNode));
+            }
+
+            for (int i = 0; i < _optionNodeWindows.Count; i++)
+            {
+                _optionNodeWindows[i].Draw();
+            }
+        }
+
+        DrawConnections();
+        DrawConnectionHelpers();
+
+        EndWindows();
+
+        EditorGUILayout.EndScrollView();
+
+        ProcessEvents();
+    }
+
+    private void DrawGrid(float gridSpacing, float gridOpacity, Color gridColor)
+    {
+        int widthDivs = Mathf.CeilToInt(position.width / gridSpacing);
+        int heightDivs = Mathf.CeilToInt(position.height / gridSpacing);
+
+        Handles.BeginGUI();
+        Handles.color = new Color(gridColor.r, gridColor.g, gridColor.b, gridOpacity);
+
+        for (int i = 0; i < widthDivs; i++)
+        {
+            Handles.DrawLine(new Vector3(gridSpacing * i, 0, 0), new Vector3(gridSpacing * i, position.height, 0));
+        }
+
+        for (int j = 0; j < heightDivs; j++)
+        {
+            Handles.DrawLine(new Vector3(0, gridSpacing * j, 0), new Vector3(position.width, gridSpacing * j, 0));
+        }
+
+        Handles.color = Color.white;
+        Handles.EndGUI();
     }
     private void DrawConnections()
     {
-        if (_dialogTimelineAsset == null) return;
-
-        for (int i = 0; i < _dialogTimelineAsset.Nodes.Count; i++)
+        if (_dialogTimelineAsset.DialogConnections != null)
         {
-            DialogNode node = _dialogTimelineAsset.Nodes[i];
-            for (int j = 0; j < node.Options.Count; j++)
+            for (int i = 0; i < _dialogTimelineAsset.DialogConnections.Count; i++)
             {
-                Option option = node.Options[j];
-                OptionNode optionNode = _dialogTimelineAsset.GetOptionNodeById(option.OptionNodeId);
-                if (optionNode != null)
+                DialogConnection dialogConnection = _dialogTimelineAsset.DialogConnections[i];
+                NodeWindow startNode = _nodeWindows.FirstOrDefault(n => n.DialogNode.Id == dialogConnection.StartNodeId);
+                NodeWindow endNode = _nodeWindows.FirstOrDefault(n => n.DialogNode.Id == dialogConnection.EndNodeId);
+
+                if (startNode != null && endNode != null)
                 {
-                    DrawNodeConnection(node.OutputPointRect.center, optionNode.InputPointRect.center);
+                    DrawConnectionLine(startNode.OutPoint.rect.center, endNode.InPoint.rect.center);
                 }
             }
         }
     }
-    private void DrawNodeConnection(Vector2 start, Vector2 end)
-    {
-        Vector3 startPosition = new Vector3(start.x, start.y, 0);
-        Vector3 endPosition = new Vector3(end.x, end.y, 0);
-        Vector3 controlPointOffset = end - start;
-        controlPointOffset.y = 0;
-        controlPointOffset.x *= 0.8f;
-        Vector3 startControlPoint = startPosition + controlPointOffset;
-        Vector3 endControlPoint = endPosition - controlPointOffset;
 
-        Color connectionColor = Color.green;
-        Handles.DrawBezier(startPosition, endPosition, startControlPoint, endControlPoint, connectionColor, null, 3f);
-    }
     private void DrawConnectionHelpers()
     {
         if (selectedInPoint != null && selectedOutPoint == null)
@@ -124,258 +199,65 @@ public class DialogTimelineEditorWindow : EditorWindow
         }
     }
 
-    private void OnClickInPoint(ConnectionPoint inPoint)
-    {
-        selectedInPoint = inPoint;
-    }
-    private void OnClickOutPoint(ConnectionPoint outPoint)
-    {
-        selectedOutPoint = outPoint;
-    }
-    private void OnClickRemovePoint()
-    {
-        if (selectedInPoint != null)
-        {
-            selectedInPoint = null;
-        }
-
-        if (selectedOutPoint != null)
-        {
-            selectedOutPoint = null;
-        }
-    }
-
     private void ProcessEvents()
     {
-        // Your code for processing events in the editor window
-    }
+        Event e = Event.current;
 
-    private void SelectDialogTimelineAsset()
-    {
-        EditorGUI.BeginChangeCheck();
-        _dialogTimelineAsset = EditorGUILayout.ObjectField("Dialog Timeline Asset", _dialogTimelineAsset, typeof(DialogTimelineAsset), false) as DialogTimelineAsset;
-        if (EditorGUI.EndChangeCheck() && _dialogTimelineAsset != null)
+        switch (e.type)
         {
-            Initialize();
-        }
-    }
-    private void Initialize()
-    {
-        nodeSize = new Vector2(200, 150);
-        _dialogTimelineAsset = null;
-        nodeWindows = new List<Rect>();
-        optionNodeWindows = new List<Rect>();
-
-        GUIStyle headerStyle = new GUIStyle();
-        headerStyle.alignment = TextAnchor.MiddleCenter;
-        headerStyle.fontStyle = FontStyle.Bold;
-        headerStyle.normal.textColor = Color.white;
-        headerStyle.fontSize = 16;
-
-        if (_dialogTimelineAsset != null)
-        {
-            for (int i = 0; i < _dialogTimelineAsset.Nodes.Count; i++)
-            {
-                DialogNode dialogNode = _dialogTimelineAsset.Nodes[i];
-                Rect newNodeWindow = new Rect(dialogNode.Position.x, dialogNode.Position.y, nodeSize.x, nodeSize.y);
-                nodeWindows.Add(newNodeWindow);
-            }
-
-            for (int i = 0; i < _dialogTimelineAsset.OptionNodes.Count; i++)
-            {
-                OptionNode optionNode = _dialogTimelineAsset.OptionNodes[i];
-                Rect newOptionNodeWindow = new Rect(optionNode.Position.x, optionNode.Position.y, nodeSize.x, nodeSize.y);
-                optionNodeWindows.Add(newOptionNodeWindow);
-            }
-        }
-    }
-    private void DrawNodes()
-    {
-        for (int i = 0; i < nodeWindows.Count; i++)
-        {
-            if (_dialogTimelineAsset.Nodes[i].IsEndNode)
-            {
-                nodeWindows[i] = GUILayout.Window(i, nodeWindows[i], DrawNodeWindow, "", GUILayout.Width(nodeSize.x), GUILayout.Height(nodeSize.y / 2));
-                DrawNodeInput(_dialogTimelineAsset.Nodes[i]);
-            }
-            else if (_dialogTimelineAsset.Nodes[i].IsStartNode)
-            {
-                nodeWindows[i] = GUILayout.Window(i, nodeWindows[i], DrawNodeWindow, "", GUILayout.Width(nodeSize.x), GUILayout.Height(nodeSize.y / 2));
-                DrawNodeOutput(_dialogTimelineAsset.Nodes[i]);
-            }
-            else
-            {
-                nodeWindows[i] = GUILayout.Window(i, nodeWindows[i], DrawNodeWindow, "", GUILayout.Width(nodeSize.x), GUILayout.Height(nodeSize.y));
-                DrawNodeInput(_dialogTimelineAsset.Nodes[i]);
-                DrawNodeOutput(_dialogTimelineAsset.Nodes[i]);
-            }
-        }
-    }
-
-    private void DrawNodeWindow(int id)
-    {
-        DialogNode node = _dialogTimelineAsset.Nodes[id];
-
-        GUILayout.BeginHorizontal();
-        GUILayout.FlexibleSpace();
-        GUILayout.Label($"Dialog Node: {node.Id}", headerStyle);
-        GUILayout.FlexibleSpace();
-        GUILayout.EndHorizontal();
-
-        EditorGUILayout.Space();
-
-        GUILayout.Label("Dialog Text:");
-        node.DialogText = EditorGUILayout.TextArea(node.DialogText, GUILayout.Height(50));
-
-        GUILayout.Space(10);
-
-        if (!node.IsStartNode && !node.IsEndNode && GUILayout.Button("Delete"))
-        {
-            DeleteNode(id);
-        }
-
-        GUILayout.Space(10);
-
-        GUI.DragWindow();
-    }
-
-    private void DeleteNode(int id)
-    {
-        if (id >= 0 && id < _dialogTimelineAsset.Nodes.Count)
-        {
-            // Remove any connections related to the node being deleted
-            for (int i = _dialogTimelineAsset.Nodes.Count - 1; i >= 0; i--)
-            {
-                DialogNode dialogNode = _dialogTimelineAsset.Nodes[i];
-                for (int j = dialogNode.Options.Count - 1; j >= 0; j--)
+            case EventType.MouseDown:
+                if (e.button == 0)
                 {
-                    if (dialogNode.Options[j].TargetDialogNodeId == _dialogTimelineAsset.Nodes[id].Id)
-                    {
-                        dialogNode.Options.RemoveAt(j);
-                    }
+                    ClearConnectionSelection();
                 }
-            }
 
-            // Remove the node from the asset and window list
-            _dialogTimelineAsset.Nodes.RemoveAt(id);
-            nodeWindows.RemoveAt(id);
-
-            GUI.changed = true;
+                if (e.button == 1)
+                {
+                    ProcessContextMenu(e.mousePosition);
+                }
+                break;
         }
     }
 
-    private void DrawNodeInput(DialogNode node)
+    private void ProcessContextMenu(Vector2 mousePosition)
     {
-        GUILayout.BeginHorizontal();
-        GUILayout.FlexibleSpace();
-        GUILayout.Label("In");
-        GUILayout.Space(10);
-        Rect inputRect = GUILayoutUtility.GetLastRect();
-        inputRect.x += 10;
-        inputRect.width = 10;
-        inputRect.height = 10;
-        EditorGUI.DrawRect(inputRect, Color.black);
-        GUILayout.FlexibleSpace();
-        GUILayout.EndHorizontal();
-
-        node.InputPointRect = inputRect;
+        GenericMenu genericMenu = new GenericMenu();
+        genericMenu.AddItem(new GUIContent("Add Dialog Node"), false, () => OnClickAddDialogNode(mousePosition));
+        genericMenu.AddItem(new GUIContent("Add Option Node"), false, () => OnClickAddOptionNode(mousePosition));
+        genericMenu.ShowAsContext();
     }
 
-    private void DrawNodeOutput(DialogNode node)
+    private void OnClickAddDialogNode(Vector2 mousePosition)
     {
-        GUILayout.BeginHorizontal();
-        GUILayout.Label("Out");
-        GUILayout.Space(10);
-        Rect outputRect = GUILayoutUtility.GetLastRect();
-        outputRect.x += 10;
-        outputRect.width = 10;
-        outputRect.height = 10;
-        EditorGUI.DrawRect(outputRect, Color.black);
-        GUILayout.FlexibleSpace();
-        GUILayout.EndHorizontal();
+        DialogNode newNode = ScriptableObject.CreateInstance<DialogNode>();
+        newNode.Position = mousePosition;
 
-        node.OutputPointRect = outputRect;
+        Undo.RecordObject(_dialogTimelineAsset, "Add Dialog Node");
+        _dialogTimelineAsset.AddDialogNode(newNode);
+        EditorUtility.SetDirty(_dialogTimelineAsset);
     }
 
-    private void DrawOptionNodes()
+    private void OnClickAddOptionNode(Vector2 mousePosition)
     {
-        for (int i = 0; i < optionNodeWindows.Count; i++)
-        {
-            optionNodeWindows[i] = GUILayout.Window(i + nodeWindows.Count, optionNodeWindows[i], DrawOptionNodeWindow, "", GUILayout.Width(nodeSize.x), GUILayout.Height(nodeSize.y));
-            DrawOptionNodeInput(_dialogTimelineAsset.OptionNodes[i]);
-            DrawOptionNodeOutput(_dialogTimelineAsset.OptionNodes[i]);
-        }
+        OptionNode newOptionNode = ScriptableObject.CreateInstance<OptionNode>();
+        newOptionNode.Position = mousePosition;
+
+        Undo.RecordObject(_dialogTimelineAsset, "Add Option Node");
+        _dialogTimelineAsset.AddOptionNode(newOptionNode);
+        EditorUtility.SetDirty(_dialogTimelineAsset);
     }
 
-    private void DrawOptionNodeWindow(int id)
+    private void DrawConnectionLine(Vector2 start, Vector2 end)
     {
-        OptionNode node = _dialogTimelineAsset.OptionNodes[id];
-
-        GUILayout.BeginHorizontal();
-        GUILayout.FlexibleSpace();
-        GUILayout.Label($"Option Node: {node.Id}", headerStyle);
-        GUILayout.FlexibleSpace();
-        GUILayout.EndHorizontal();
-
-        EditorGUILayout.Space();
-
-        GUILayout.Label("Option Text:");
-        node.OptionText = EditorGUILayout.TextArea(node.OptionText, GUILayout.Height(50));
-
-        GUILayout.Space(10);
-
-        if (GUILayout.Button("Delete"))
-        {
-            DeleteOptionNode(id);
-        }
-
-        GUILayout.Space(10);
-
-        GUI.DragWindow();
-    }
-
-    private void DeleteOptionNode(int id)
-    {
-        if (id >= 0 && id < _dialogTimelineAsset.OptionNodes.Count)
-        {
-            // Remove the option node from the asset and window list
-            _dialogTimelineAsset.OptionNodes.RemoveAt(id);
-            optionNodeWindows.RemoveAt(id);
-
-            GUI.changed = true;
-        }
-    }
-
-    private void DrawOptionNodeInput(OptionNode node)
-    {
-        GUILayout.BeginHorizontal();
-        GUILayout.FlexibleSpace();
-        GUILayout.Label("In");
-        GUILayout.Space(10);
-        Rect inputRect = GUILayoutUtility.GetLastRect();
-        inputRect.x += 10;
-        inputRect.width = 10;
-        inputRect.height = 10;
-        EditorGUI.DrawRect(inputRect, Color.black);
-        GUILayout.FlexibleSpace();
-        GUILayout.EndHorizontal();
-
-        node.InputPointRect = inputRect;
-    }
-
-    private void DrawOptionNodeOutput(OptionNode node)
-    {
-        GUILayout.BeginHorizontal();
-        GUILayout.Label("Out");
-        GUILayout.Space(10);
-        Rect outputRect = GUILayoutUtility.GetLastRect();
-        outputRect.x += 10;
-        outputRect.width = 10;
-        outputRect.height = 10;
-        EditorGUI.DrawRect(outputRect, Color.black);
-        GUILayout.FlexibleSpace();
-        GUILayout.EndHorizontal();
-
-        node.OutputPointRect = outputRect;
+        Handles.DrawBezier(
+            start,
+            end,
+            start + Vector2.left * 50f,
+            end - Vector2.left * 50f,
+            Color.white,
+            null,
+            2f
+        );
     }
 }
+
