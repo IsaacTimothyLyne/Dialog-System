@@ -22,6 +22,16 @@ public class DialogTimelineAsset : ScriptableObject
             OptionNodes = new List<OptionNode>();
         }
     }
+    public void AddDialogNode(DialogNode newNode)
+    {
+        DialogNodes.Add(newNode);
+    }
+
+    public void AddOptionNode(OptionNode newOptionNode)
+    {
+        OptionNodes.Add(newOptionNode);
+    }
+
 }
 
 /* to say to chat GPT:
