@@ -46,7 +46,11 @@ public class DialogController : MonoBehaviour
     private void ShowOptions(DialogNode node)
     {
         optionPanel.SetActive(true);
-        foreach (OptionNode optionNode in node.OptionNodes)
+
+        // Get the list of OptionNodes connected to the current DialogNode
+        List<OptionNode> connectedOptionNodes = dialogTimelineAsset.GetConnectedOptionNodes(node);
+
+        foreach (OptionNode optionNode in connectedOptionNodes)
         {
             GameObject optionButton = Instantiate(optionButtonPrefab, optionPanel.transform);
             TMPro.TextMeshProUGUI buttonText = optionButton.GetComponentInChildren<TMPro.TextMeshProUGUI>();
@@ -56,6 +60,7 @@ public class DialogController : MonoBehaviour
             button.onClick.AddListener(() => OnOptionSelected(optionNode));
         }
     }
+
 
     private void OnOptionSelected(OptionNode optionNode)
     {

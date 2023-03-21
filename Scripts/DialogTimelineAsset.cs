@@ -19,4 +19,23 @@ public class DialogTimelineAsset : ScriptableObject
             OptionNodes = new List<OptionNode>();
         }
     }
+    public List<OptionNode> GetConnectedOptionNodes(DialogNode dialogNode)
+    {
+        List<OptionNode> connectedOptionNodes = new List<OptionNode>();
+
+        foreach (var connection in DialogNodeConnections)
+        {
+            if (connection.FromNodeId == dialogNode.Id)
+            {
+                OptionNode optionNode = OptionNodes.Find(x => x.Id == connection.ToNodeId);
+                if (optionNode != null)
+                {
+                    connectedOptionNodes.Add(optionNode);
+                }
+            }
+        }
+
+        return connectedOptionNodes;
+    }
+
 }
