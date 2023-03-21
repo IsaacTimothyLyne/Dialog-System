@@ -6,6 +6,9 @@ public class DialogTimelineAsset : ScriptableObject
 {
     public List<DialogNode> DialogNodes;
     public List<OptionNode> OptionNodes;
+    [SerializeField]
+    public List<DialogConnection> DialogConnections = new List<DialogConnection>();
+
 
     private void OnEnable()
     {
@@ -19,24 +22,13 @@ public class DialogTimelineAsset : ScriptableObject
             OptionNodes = new List<OptionNode>();
         }
     }
-    public List<OptionNode> GetConnectedOptionNodes(DialogNode dialogNode)
-    {
-        List<OptionNode> connectedOptionNodes = new List<OptionNode>();
-
-        foreach (var connection in DialogConnections)
-        {
-            if (connection.FromNodeId == dialogNode.Id)
-            {
-                OptionNode optionNode = OptionNodes.Find(x => x.Id == connection.ToNodeId);
-                if (optionNode != null)
-                {
-                    connectedOptionNodes.Add(optionNode);
-                }
-            }
-        }
-
-        return connectedOptionNodes;
-    }
-
-
 }
+
+/* to say to chat GPT:
+
+DialogConnections isnt present in the DialogTimelineAsset script as you can see in the github here:
+https://github.com/IsaacTimothyLyne/Dialog-System
+
+How should i impliment this and what other scripts should i change to update this
+
+ */
