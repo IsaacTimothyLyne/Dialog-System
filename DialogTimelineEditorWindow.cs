@@ -521,9 +521,9 @@ public class DialogTimelineEditorWindow : EditorWindow
             }
             else
             {
-                newNode = new DialogNode($"Node_{_dialogTimelineAsset.Nodes.Count}", "New Dialog Node");
+                newNode = new DialogNode($"Node_{_dialogTimelineAsset.GetDialogNodeCount()}", "New Dialog Node");
             }
-            _dialogTimelineAsset.Nodes.Add(newNode);
+            _dialogTimelineAsset.AddDialogNode(newNode);
 
             newNode.IsStartNode = isStartNode;
             newNode.IsEndNode = isEndNode;
@@ -540,10 +540,7 @@ public class DialogTimelineEditorWindow : EditorWindow
             if (newNode == null) Debug.LogError("newNode is null");
 
             newNode.Position = position;
-            _dialogTimelineAsset.OptionNodes.Add(newNode);
-
-            if (_dialogTimelineAsset.OptionNodes == null) Debug.LogError("_dialogTimelineAsset.OptionNodes is null");
-            if (optionNodeWindows == null) Debug.LogError("optionNodeWindows is null");
+            _dialogTimelineAsset.AddOptionNode(newNode);
 
             optionNodeWindows.Add(new Rect(position, nodeSize));
             return newNode;

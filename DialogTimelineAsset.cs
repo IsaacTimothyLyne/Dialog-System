@@ -6,8 +6,9 @@ using UnityEngine;
 
 public class DialogTimelineAsset : ScriptableObject
 {
-    public List<DialogNode> Nodes; // A list of all dialog nodes in the timeline
-    public List<OptionNode> OptionNodes;
+    [SerializeField] private List<DialogNode> DialogNodes; // A list of all dialog nodes in the timeline
+    [SerializeField] private List<OptionNode> OptionNodes;
+
 
     public int MaxOptionsCount = 4;
 
@@ -26,18 +27,49 @@ public class DialogTimelineAsset : ScriptableObject
         set { optionsLayoutDirection = value; }
     }
 
-    public DialogTimelineAsset()
+    public int GetOptionNodeCount()
     {
-        Nodes = new List<DialogNode>();
+        return OptionNodes.Count;
     }
 
-    public bool TryGetNodeById(string id, out DialogNode node)
+    public int GetDialogNodeCount()
     {
-        for (int i = 0; i < Nodes.Count; i++)
+        return DialogNodes.Count;
+    }
+
+    public void AddDialogNode(DialogNode node)
+    {
+        DialogNodes.Add(node);
+    }
+
+    public void RemoveDialogNode(int index)
+    {
+        DialogNodes.RemoveAt(index);
+    }
+
+    public void AddOptionNode(OptionNode optionNode)
+    {
+        OptionNodes.Add(optionNode);
+    }
+
+    public void RemoveOptionNode(int index)
+    {
+        OptionNodes.RemoveAt(index);
+    }
+
+    public DialogTimelineAsset()
+    {
+        DialogNodes = new List<DialogNode>();
+        OptionNodes = new List<OptionNode>();
+    }
+
+    public bool TryGetOptionNodeById(string id, out OptionNode node)
+    {
+        for (int i = 0; i < OptionNodes.Count; i++)
         {
-            if (Nodes[i].Id == id)
+            if (OptionNodes[i].Id == id)
             {
-                node = Nodes[i];
+                node = OptionNodes[i];
                 return true;
             }
         }
@@ -47,8 +79,29 @@ public class DialogTimelineAsset : ScriptableObject
     }
 
 
-    public DialogNode GetNodeById(string nodeId)
+    public OptionNode GetOptionNodeById(string nodeId)
     {
-        return Nodes.Find(node => node.Id == nodeId);
+        return OptionNodes.Find(node => node.Id == nodeId);
+    }
+
+    public bool TryGetDialogNodeById(string id, out DialogNode node)
+    {
+        for (int i = 0; i < DialogNodes.Count; i++)
+        {
+            if (DialogNodes[i].Id == id)
+            {
+                node = DialogNodes[i];
+                return true;
+            }
+        }
+
+        node = null;
+        return false;
+    }
+
+
+    public DialogNode GetDialogNodeById(string nodeId)
+    {
+        return DialogNodes.Find(node => node.Id == nodeId);
     }
 }

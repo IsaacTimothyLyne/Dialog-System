@@ -13,10 +13,11 @@ public class DialogNode: ScriptableObject
     public Rect InputPointRect;
     public Rect OutputPointRect;
     public Vector2 Position;
-    [SerializeField] public bool IsStartNode;
-    [SerializeField] public bool IsEndNode;
+
     public enum DialogNodeType
     {
+        StartNode,
+        EndNode,
         DialogNode,
         OptionNode
     }

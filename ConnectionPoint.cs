@@ -3,6 +3,8 @@
     public enum ConnectionPointType
     {
         DialogNode,
+        EndNode,
+        StartNode,
         OptionNode
     }
 
