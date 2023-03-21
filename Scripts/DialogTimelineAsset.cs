@@ -23,7 +23,7 @@ public class DialogTimelineAsset : ScriptableObject
     {
         List<OptionNode> connectedOptionNodes = new List<OptionNode>();
 
-        foreach (var connection in DialogNodeConnections)
+        foreach (var connection in DialogConnections)
         {
             if (connection.FromNodeId == dialogNode.Id)
             {
@@ -37,5 +37,6 @@ public class DialogTimelineAsset : ScriptableObject
 
         return connectedOptionNodes;
     }
+
 
 }
