@@ -33,12 +33,3 @@ public class DialogTimelineAsset : ScriptableObject
     }
 
 }
-
-/* to say to chat GPT:
-
-DialogConnections isnt present in the DialogTimelineAsset script as you can see in the github here:
-https://github.com/IsaacTimothyLyne/Dialog-System
-
-How should i impliment this and what other scripts should i change to update this
-
- */
